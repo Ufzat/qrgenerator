@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSE Global - Denetçi Kimlik Kartı Oluşturucu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/svg2pdf.js/2.2.3/svg2pdf.umd.min.js"></script>
+
+    <style>
+        :root {
+            var(--canvas-w): 100.817mm;
+            var(--canvas-h): 70.817mm;
+            var(--tse-blue): #126ab3;
+            var(--tse-light): #5583c3;
+        }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            background-color: #f1f5f9;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar { width: 380px; background: #0f172a; color: white; display: flex; flex-direction: column; z-index: 50; box-shadow: 10px 0 30px rgba(0,0,0,0.3); }
+        .sidebar-header { padding: 1.5rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sidebar-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+        
+        .input-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; }
+        .input-box label { display: block; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        .input-box input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.5rem 0.8rem; border-radius: 8px; font-size: 16px; }
+
+        .preview-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #cbd5e1; padding: 2rem; overflow: hidden; }
+
+        #captureArea { width: 100.817mm; height: 70.817mm; background: white; position: relative; flex-shrink: 0; transform-origin: center center; box-shadow: 0 0 100px rgba(0,0,0,0.25); overflow: hidden; transition: transform 0.1s ease-out; }
+
+        #bgContainer { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: 1; }
+        
+        .photo-frame { position: absolute; left: 13.6mm; top: 25.6mm; width: 22.5mm; height: 31.7mm; background: white; border-radius: 3.5mm; padding: 0.8mm; z-index: 10; border: 0.5pt solid #d1d5db; }
+        #photoImg { width: 100%; height: 100%; object-fit: cover; border-radius: 2.8mm; background: #e2e8f0; }
+
+        .text-layer { position: absolute; left: 38.2mm; width: 58mm; z-index: 10; pointer-events: none; display: flex; flex-direction: column; white-space: nowrap; }
+        #nameDsp { position: absolute; top: 36.6mm; font-size: 13pt; font-weight: 700; color: #000; line-height: 1; }
+        #surnameDsp { position: absolute; top: 41.4mm; font-size: 13pt; font-weight: 700; color: #000; line-height: 1; text-transform: uppercase; }
+        #roleTRDsp { position: absolute; top: 48.4mm; font-size: 9.4pt; font-weight: 700; color: #126ab3; line-height: 1; }
+        #roleENDsp { position: absolute; top: 53.0mm; font-size: 9.4pt; font-weight: 700; color: #5583c3; line-height: 1; }
+
+        .btn-download { width: 100%; background: #126ab3; color: white; font-weight: 700; padding: 1.25rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s; cursor: pointer; box-shadow: 0 10px 20px rgba(18, 106, 179, 0.2); margin-top: 1rem; }
+        .btn-download:hover { background: #1a7fd1; transform: translateY(-2px); }
+        .btn-download:disabled { background: #64748b; cursor: not-allowed; transform: none; box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="text-2xl font-bold tracking-tight">TSE Global</h1>
+            <p class="text-[12px] text-blue-400 font-bold uppercase tracking-widest mt-1">Denetçi Kimlik Kartı Oluşturucu</p>
+        </div>
+
+        <div class="sidebar-content">
+            <div class="input-box">
+                <label>Personel Fotoğrafı</label>
+                <input type="file" id="photoInp" accept="image/*" class="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer w-full">
+            </div>
+
+            <div class="input-box space-y-4">
+                <div><label>Ad</label><input type="text" id="nameInp" value="Orhan Mustafa"></div>
+                <div><label>Soyad</label><input type="text" id="surnameInp" value="ARSLANOĞLU"></div>
+                <div><label>Ünvan (TR)</label><input type="text" id="roleTRInp" value="Kıdemli Muayene Personeli"></div>
+                <div><label>Ünvan (EN)</label><input type="text" id="roleENInp" value="Senior Inspector"></div>
+            </div>
+
+            <button id="downloadPdf" class="btn-download">
+                <svg id="btnIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span id="btnText">DİREKT PDF İNDİR</span>
+            </button>
+            
+            <div class="mt-6 p-4 bg-green-900/20 border border-green-800/30 rounded-xl text-[13px] leading-relaxed text-green-300">
+                <strong class="text-white block mb-1">PRO BİLGİ:</strong>
+                Bu sistem, arka planda %100 Vektörel (Matbaa kalitesinde) çizim yapar. Yazdırma paneli açılmaz, dosya anında iner.
+            </div>
+        </div>
+    </aside>
+
+    <main class="preview-area" id="previewArea">
+        <div id="captureArea">
+            
+            <div id="bgContainer">
+                <img src="https://www.tseglobal.com.tr/images/media/dokumanlar/proje/images/TSE_SIRKET_KIMLIK_KARTI_2026.svg" alt="TSE Arka Plan" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            
+            <div class="photo-frame">
+                <img id="photoImg" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Personel">
+            </div>
+
+            <div class="text-layer">
+                <div id="nameDsp">Orhan Mustafa</div>
+                <div id="surnameDsp">ARSLANOĞLU</div>
+                <div id="roleTRDsp">Kıdemli Muayene Personeli</div>
+                <div id="roleENDsp">Senior Inspector</div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
